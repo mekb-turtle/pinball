@@ -1,13 +1,6 @@
 #include <stdio.h>
 #include <GL/glut.h>
 #include <math.h>
-#include <time.h>
-#include <unistd.h>
-#include <signal.h>
-#include <stdbool.h>
-#include <stdint.h>
-#include <string.h>
-#include <errno.h>
 #define PHYSICS_INTERVAL 20
 #define SCALE 0.4f
 struct pos1 {
