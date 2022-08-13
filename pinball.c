@@ -47,6 +47,7 @@
 
 struct ball_ {
 	float x, y, vx, vy;
+	bool launch;
 } ball;
 struct pos {
 	float x, y;
@@ -103,6 +104,7 @@ struct pos nearest(struct pos2 line, float px, float py) {
 }
 int w, h, s, ow, oh;
 bool tilt_l, tilt_r;
+bool flipper_l, flipper_r;
 bool started = 0;
 bool pulling_launch;
 float launch = 0.0f;
@@ -154,7 +156,7 @@ void display() {
 	glEnable(GL_DEPTH_TEST);
 	glPushMatrix();
 	float tilt = get_tilt();
-	glRotatef(tilt != 0.0f ? ROTATE_TILT_Y : ROTATE_Y, 0.0f, tilt || 1.0f, 0.0f);
+	glRotatef(tilt != 0.0f ? ROTATE_TILT_Y * -tilt : ROTATE_Y, 0.0f, 1.0f, 0.0f);
 	glRotatef(ROTATE_X, 2.0f, 0.0f, 0.0f);
 	glScalef(SCALE_X, SCALE_Y, SCALE_Z);
 	glLightfv(GL_LIGHT0, GL_POSITION, (float[]) {0.0f,0.0f,0.0f,1.0f});
@@ -207,33 +209,32 @@ void display() {
 	glPopMatrix();
 	glutSwapBuffers();
 }
-void keyboard(unsigned char key, int x, int y) {
+void keyboard(unsigned char key, bool down) {
 	switch (key) {
-		case 'q': case 'Q': break;
-		case 'e': case 'E': break;
-		case 'z': case 'Z': break;
-		case 'c': case 'C': break;
+		case 'q': case 'Q': flipper_l = down; break;
+		case 'e': case 'E': flipper_r = down; break;
+		case 'z': tilt_l = down; case 'Z': break;
+		case 'c': tilt_r = down; case 'C': break;
+		case ' ': pulling_launch = down; break;
 		default: return;
 	}
 	glutPostRedisplay();
 }
+void keyboardDown(unsigned char key, int x, int y) {
+	keyboard(key, 1);
+}
+void keyboardUp(unsigned char key, int x, int y) {
+	keyboard(key, 0);
+}
 void reset_ball(struct ball_ *b) {
 	b->vx = b->vy = 0;
+	b->launch = 0;
 	b->x = BALL_INIT_X;
 	b->y = BALL_INIT_Y;
 }
-void test(int bla) {
-	pulling_launch = 0;
-}
 void reset(struct ball_ *b) {
 	started = 0;
-	launch = 0.0f;
-	release_at = 0.0f;
-	releasing = 0;
-	pulling_launch = 0;
 	reset_ball(b);
-	pulling_launch = 1;
-	glutTimerFunc(3000, test, 0);
 }
 void update_ball(struct ball_ *b) {
 	for (int i = 0; i < STEPS * PHYSICS_REPEAT; ++i) {
@@ -248,7 +249,7 @@ void update_ball(struct ball_ *b) {
 				releasing = 1;
 				launch -= LAUNCH_RELEASE_STEP * release_at / STEPS;
 				if (launch < 0.0f) launch = 0.0f;
-				b->vy = LAUNCH_RELEASE_STEP * (BOARD_H+LAUNCHER_INIT_Y) * release_at;
+				if (b->launch) b->vy = LAUNCH_RELEASE_STEP * (BOARD_H+LAUNCHER_INIT_Y) * release_at;
 			} else { releasing = 0; }
 		}
 		walls[2].y1 = walls[2].y2 = lerp(LAUNCHER_INIT_Y, -BOARD_H, launch);
@@ -271,11 +272,13 @@ void update_ball(struct ball_ *b) {
 				bumpers[i].by = sinf(t);
 			}
 		}
+		b->launch = 0;
 		for (size_t i = 0; i < sizeof(walls) / sizeof(struct pos2); ++i) {
 			if (i == 1 && !started) continue;
 			struct pos l = nearest(walls[i], b->x, b->y); // get point to collide with
 			float d = distance(b->x, b->y, l.x, l.y);
 			if (d <= BALL_RADIUS) {
+				if (i == 2) b->launch = 1;
 				float t = angle(l.x, l.y, b->x, b->y); // wall angle
 				if (i == 2) {
 					b->vx = 0.0f;
@@ -327,7 +330,9 @@ int main(int argc, char* argv[]) {
 	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
 	glEnable(GL_LIGHTING);
 	glutDisplayFunc(display);
-	glutKeyboardFunc(keyboard);
+	glutSetKeyRepeat(GLUT_KEY_REPEAT_OFF);
+	glutKeyboardFunc(keyboardDown);
+	glutKeyboardUpFunc(keyboardUp);
 	reset(&ball);
 	physics(0);
 	glutMainLoop();
