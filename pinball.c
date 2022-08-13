@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <stdbool.h>
 #include <GL/glut.h>
 #include <math.h>
@@ -335,6 +336,9 @@ int main(int argc, char* argv[]) {
 	glutKeyboardUpFunc(keyboardUp);
 	reset(&ball);
 	physics(0);
+	printf("Q/E to use flippers\n");
+	printf("Z/C to flip board\n");
+	printf("Space to launch\n");
 	glutMainLoop();
 	return 0;
 }
