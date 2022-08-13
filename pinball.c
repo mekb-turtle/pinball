@@ -15,11 +15,13 @@
 #define LAUNCHER_COLOR 1.0f, 1.0f, 0.0f, 1.0f
 #define Z0 -0.5f
 #define Z1 +0.5f
-#define ROTATE_X 7.5f
-#define ROTATE_Y 1.0f
+#define ROTATE_X 3.0f
+#define ROTATE_Y 0.0f
 #define ROTATE_TILT_Y 4.0f
 //#define DEBUG_MARKERS
 #define DRAW_CYLINDER_TOP
+#define WALL_X_OFFSET -0.3f
+#define WALL_Y_OFFSET 0.0f
 
 #define PHYSICS_INTERVAL 25
 #define PHYSICS_REPEAT 2
@@ -46,6 +48,14 @@
 #define LAUNCH_PULL_STEP 0.0045f
 #define LAUNCH_RELEASE_STEP 0.05f
 
+#define WALL_BUMPER 0
+#define WALL_BARRIER 1
+#define WALL_LAUNCHER 2
+#define WALL_BOTTOM 3
+#define WALL_TOP 4
+#define WALL_LEFT 5
+#define WALL_TOP_RIGHT 6
+
 struct ball_ {
 	float x, y, vx, vy;
 	bool launch;
@@ -70,7 +80,8 @@ struct pos2 {
 	{ +BOARD_W, -BOARD_H, +BOUNDS_W, -BOUNDS_H }, // bottom wall of launcher
 	{ +BOARD_W, +BOARD_H, +BOUNDS_W, +BOUNDS_H }, // top wall of launcher
 	{ +BOARD_W, -BOARD_H, +BOARD_W, +BOARD_H-(BOUNDS_W-BOARD_W)*2 }, // left wall of launcher
-	{ +BOUNDS_W, -BOARD_H, +BOUNDS_W, +BOUNDS_H }, // right wall of launcher
+	{ +BOUNDS_W, +BOARD_H, +BOUNDS_W, +BOUNDS_H-(BOUNDS_W-BOARD_W)*1.25 }, // top right wall of launcher
+	{ +BOUNDS_W, -BOARD_H, +BOUNDS_W, +BOUNDS_H-(BOUNDS_W-BOARD_W)*1.25 }, // right wall of launcher
 	{ +BOARD_W, +BOARD_H, -BOARD_W, +BOARD_H }, // top wall of game
 	{ -BOARD_W, +BOARD_H, -BOARD_W, -BOARD_H }, // left wall of game
 	{ +BOARD_W*0.5, -BOARD_H*0.3, +BOARD_W, -BOARD_H*0.2 },
@@ -166,25 +177,43 @@ void display() {
 		draw_circle(BUMPER_RADIUS, bumpers[i].x - bumpers[i].bx, bumpers[i].y - bumpers[i].by);
 		bumpers[i].bx = bumpers[i].by = 0.0f;
 	}
+	glColor4f(WALL_COLOR);
+	glBegin(GL_POLYGON);
+	glVertex3f(walls[WALL_BUMPER].x1, walls[WALL_BUMPER].y1, Z0);
+	glVertex3f(walls[WALL_BUMPER].x2, walls[WALL_BUMPER].y2, Z0);
+	glVertex3f(walls[WALL_BUMPER].x2, walls[WALL_BUMPER].y1, Z0);
+	glEnd();
 	glColor4f(BALL_COLOR);
 	draw_circle(BALL_RADIUS, ball.x, ball.y);
 	for (size_t i = 0; i < sizeof(walls) / sizeof(struct pos2); ++i) {
-		if (i == 1 && !started) continue;
+		if (i == WALL_BARRIER && !started) continue;
 		switch (i) {
-			case 0: glColor4f(BUMPER_COLOR); break; 
-			case 2: glColor4f(LAUNCHER_COLOR); break; 
-			case 1: case 3: glColor4f(WALL_COLOR); break; 
+			/*
+			case WALL_BUMPER:
+			case WALL_TOP:
+			case WALL_TOP_RIGHT:
+				glColor4f(BUMPER_COLOR);
+				break;
+			*/
+			case WALL_LAUNCHER:
+				glColor4f(LAUNCHER_COLOR);
+				break;
+			default:
+				glColor4f(WALL_COLOR);
+				break;
 		}
-		if (i == 3 && launch >= 1.0f) continue;
+		if (i == WALL_BOTTOM && launch >= 1.0f) continue;
+		float off = (walls[i].x1 == walls[i].x2 && tilt == 0.0f) * WALL_X_OFFSET;
+		if (i == WALL_LEFT) off = -off;
 		glBegin(GL_POLYGON);
 		glVertex3f(walls[i].x1, walls[i].y1, Z0);
 		glVertex3f(walls[i].x2, walls[i].y2, Z0);
-		glVertex3f(walls[i].x2, walls[i].y2, Z1);
+		glVertex3f(walls[i].x2+off, walls[i].y2+WALL_Y_OFFSET, Z1);
 		glEnd();
 		glBegin(GL_POLYGON);
 		glVertex3f(walls[i].x1, walls[i].y1, Z0);
-		glVertex3f(walls[i].x1, walls[i].y1, Z1);
-		glVertex3f(walls[i].x2, walls[i].y2, Z1);
+		glVertex3f(walls[i].x1+off, walls[i].y1+WALL_Y_OFFSET, Z1);
+		glVertex3f(walls[i].x2+off, walls[i].y2+WALL_Y_OFFSET, Z1);
 		glEnd();
 	}
 #ifdef DEBUG_MARKERS
@@ -237,7 +266,7 @@ void reset(struct ball_ *b) {
 	started = 0;
 	reset_ball(b);
 }
-void update_ball(struct ball_ *b) {
+void physics(int bla) {
 	for (int i = 0; i < STEPS * PHYSICS_REPEAT; ++i) {
 		if (pulling_launch && !releasing) {
 			launch += LAUNCH_PULL_STEP / STEPS;
@@ -250,72 +279,70 @@ void update_ball(struct ball_ *b) {
 				releasing = 1;
 				launch -= LAUNCH_RELEASE_STEP * release_at / STEPS;
 				if (launch < 0.0f) launch = 0.0f;
-				if (b->launch) b->vy = LAUNCH_RELEASE_STEP * (BOARD_H+LAUNCHER_INIT_Y) * release_at;
+				if (ball.launch) ball.vy = LAUNCH_RELEASE_STEP * (BOARD_H+LAUNCHER_INIT_Y) * release_at;
 			} else { releasing = 0; }
 		}
 		walls[2].y1 = walls[2].y2 = lerp(LAUNCHER_INIT_Y, -BOARD_H, launch);
-		b->x += b->vx / STEPS;
-		b->y += b->vy / STEPS;
-		if (started) b->vx += (GRAVITY_X * get_tilt()) / STEPS;
-		b->vy -= (started ? GRAVITY_Y : LAUNCH_GRAVITY_Y) / STEPS;
+		ball.x += ball.vx / STEPS;
+		ball.y += ball.vy / STEPS;
+		if (started) ball.vx += (GRAVITY_X * get_tilt()) / STEPS;
+		ball.vy -= (started ? GRAVITY_Y : LAUNCH_GRAVITY_Y) / STEPS;
 		for (size_t i = 0; i < sizeof(bumpers) / sizeof(struct bumper); ++i) {
-			float d = distance(b->x, b->y, bumpers[i].x, bumpers[i].y);
+			float d = distance(ball.x, ball.y, bumpers[i].x, bumpers[i].y);
 			if (d <= BALL_RADIUS + BUMPER_RADIUS) {
-				float t = angle(bumpers[i].x, bumpers[i].y, b->x, b->y); // bumper angle
-				float vd = distance(0, 0, b->vx, b->vy); // magnitude of velocity
+				float t = angle(bumpers[i].x, bumpers[i].y, ball.x, ball.y); // bumper angle
+				float vd = distance(0, 0, ball.vx, ball.vy); // magnitude of velocity
 				float vv = vd * BUMPER_NEW_VEL; // new velocity
 				if (vv < BUMPER_MIN_VEL) vv = BUMPER_MIN_VEL; // set minimum new velocity
-				b->vx = (cosf(t) * vv) + (b->vx * BUMPER_OLD_VEL), // set the velocity from the old and bounce velocity
-				b->vy = (sinf(t) * vv) + (b->vx * BUMPER_OLD_VEL),
-				b->x = bumpers[i].x + cosf(t) * (BALL_RADIUS + BUMPER_RADIUS), // push the ball so we don't collide again instantly
-				b->y = bumpers[i].y + sinf(t) * (BALL_RADIUS + BUMPER_RADIUS);
+				ball.vx = (cosf(t) * vv) + (ball.vx * BUMPER_OLD_VEL), // set the velocity from the old and bounce velocity
+				ball.vy = (sinf(t) * vv) + (ball.vx * BUMPER_OLD_VEL),
+				ball.x = bumpers[i].x + cosf(t) * (BALL_RADIUS + BUMPER_RADIUS), // push the ball so we don't collide again instantly
+				ball.y = bumpers[i].y + sinf(t) * (BALL_RADIUS + BUMPER_RADIUS);
 				bumpers[i].bx = cosf(t);
 				bumpers[i].by = sinf(t);
 			}
 		}
-		b->launch = 0;
+		ball.launch = 0;
 		for (size_t i = 0; i < sizeof(walls) / sizeof(struct pos2); ++i) {
-			if (i == 1 && !started) continue;
-			struct pos l = nearest(walls[i], b->x, b->y); // get point to collide with
-			float d = distance(b->x, b->y, l.x, l.y);
+			if (i == WALL_BARRIER && !started) continue;
+			if (i == WALL_BOTTOM && launch >= 1.0f) continue;
+			struct pos l = nearest(walls[i], ball.x, ball.y); // get point to collide with
+			float d = distance(ball.x, ball.y, l.x, l.y);
 			if (d <= BALL_RADIUS) {
-				if (i == 2) b->launch = 1;
-				float t = angle(l.x, l.y, b->x, b->y); // wall angle
-				if (i == 2) {
-					b->vx = 0.0f;
+				if (i == WALL_LAUNCHER) ball.launch = 1;
+				float t = angle(l.x, l.y, ball.x, ball.y); // wall angle
+				if (i == WALL_LAUNCHER) {
+					ball.vx = 0.0f;
 				} else {
-					float vd = distance(0, 0, b->vx, b->vy); // magnitude of velocity
+					float vd = distance(0, 0, ball.vx, ball.vy); // magnitude of velocity
 					float vv = vd * (i == 0 ? BUMPER_WALL_NEW_VEL : WALL_NEW_VEL); // new velocity
 					if (vv < WALL_MIN_VEL) vv = WALL_MIN_VEL; // set minimum new velocity
-					b->vx -= (cosf(t) * vd) - (cosf(t) * vv), // cancel out the velocity with the wall angle
-					b->vy -= (sinf(t) * vd) - (sinf(t) * vv); // set the velocity from subtracted old and bounce velocity
+					ball.vx -= (cosf(t) * vd) - (cosf(t) * vv), // cancel out the velocity with the wall angle
+					ball.vy -= (sinf(t) * vd) - (sinf(t) * vv); // set the velocity from subtracted old and bounce velocity
 				}
-				b->x = l.x + cosf(t) * BALL_RADIUS, // push the ball so we don't collide again instantly
-				b->y = l.y + sinf(t) * BALL_RADIUS;
+				ball.x = l.x + cosf(t) * BALL_RADIUS, // push the ball so we don't collide again instantly
+				ball.y = l.y + sinf(t) * BALL_RADIUS;
 			}
 		}
-		float vd = distance(0, 0, b->vx, b->vy);
+		float vd = distance(0, 0, ball.vx, ball.vy);
 		if (vd >= MAX_VEL) {
-			b->vx /= vd;
-			b->vy /= vd;
-			b->vx *= MAX_VEL;
-			b->vy *= MAX_VEL;
+			ball.vx /= vd;
+			ball.vy /= vd;
+			ball.vx *= MAX_VEL;
+			ball.vy *= MAX_VEL;
 		}
 		if (!started) {
-			if (b->x <= BOARD_W && b->y <= BOARD_H && b->x >= -BOARD_W && b->y >= -BOARD_H) {
-				struct pos l = nearest(walls[1], b->x, b->y);
-				float d = distance(b->x, b->y, l.x, l.y);
+			if (ball.x <= BOARD_W && ball.y <= BOARD_H && ball.x >= -BOARD_W && ball.y >= -BOARD_H) {
+				struct pos l = nearest(walls[1], ball.x, ball.y);
+				float d = distance(ball.x, ball.y, l.x, l.y);
 				if (d > BALL_RADIUS)
 					started = 1;
 			}
 		}
-		if ((b->y < -BOUNDS_H || b->y > BOUNDS_H || b->x < -BOUNDS_W || b->x > BOUNDS_W) || (started && (b->y < -BOARD_H || b->y > BOARD_H || b->x < -BOARD_W || b->x > BOARD_W))) {
-			return reset(b);
+		if ((ball.y < -BOUNDS_H || ball.y > BOUNDS_H || ball.x < -BOUNDS_W || ball.x > BOUNDS_W) || (started && (ball.y < -BOARD_H || ball.y > BOARD_H || ball.x < -BOARD_W || ball.x > BOARD_W))) {
+			reset(&ball);
 		}
 	}
-}
-void physics(int bla) {
-	update_ball(&ball);
 	glutPostRedisplay();
 	glutTimerFunc(PHYSICS_INTERVAL, physics, 0);
 }
