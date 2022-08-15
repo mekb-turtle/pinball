@@ -33,6 +33,7 @@
 #define BUMPER_MIN_VEL 0.35f
 #define WALL_NEW_VEL 2.0f
 #define BUMPER_WALL_NEW_VEL 3.0f
+#define FLIPPER_WALL_NEW_VEL 2.2f
 #define WALL_MIN_VEL 0.08f
 #define MAX_VEL 0.6f
 #define BOARD_W 20.0f
@@ -94,6 +95,7 @@ struct pos2 {
 	{ .x1=+BOARD_W, .y1=+BOARD_H, .x2=-BOARD_W, .y2=+BOARD_H }, // top wall of game
 	{ .x1=-BOARD_W, .y1=+BOARD_H, .x2=-BOARD_W, .y2=-BOARD_H }, // left wall of game
 	{ .x1=+BOARD_W*0.5, .y1=-BOARD_H*0.3, .x2=+BOARD_W, .y2=-BOARD_H*0.2 },
+	{ .x1=-BOARD_W*0.5, .y1=-BOARD_H*0.6, .x2=-BOARD_W, .y2=-BOARD_H*0.5 },
 	{ .x1=-BOARD_W, .y1=-BOARD_H*0.7, .x2=-BOARD_W*0.5, .y2=-BOARD_H*0.8 },
 	{ .x1=+BOARD_W, .y1=-BOARD_H*0.7, .x2=+BOARD_W*0.5, .y2=-BOARD_H*0.8 },
 	{ .x1=-BOARD_W*0.8, .y1=+BOARD_H*0.3, .x2=-BOARD_W*0.5, .y2=+BOARD_H*0.4 },
@@ -181,10 +183,8 @@ void display() {
 	ow = w > h ? (w - s) / 2 : 0;
 	oh = w < h ? (h - s) / 2 : 0;
 	glViewport(ow, oh, s, s);
-	glClearColor(0.0, 0.0, 0.0, 1.0);
 	glPointSize(1.0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glEnable(GL_DEPTH_TEST);
 	glPushMatrix();
 	float tilt = get_tilt();
 	glRotatef(tilt != 0.0f ? ROTATE_TILT_Y * -tilt : ROTATE_Y, 0.0f, 1.0f, 0.0f);
@@ -225,11 +225,7 @@ void display() {
 		glVertex3f(walls[i].x1, walls[i].y1, Z0);
 		glVertex3f(walls[i].x2, walls[i].y2, Z0);
 		glVertex3f(walls[i].x2+off, walls[i].y2+WALL_Y_OFFSET, Z1);
-		glEnd();
-		glBegin(GL_POLYGON);
-		glVertex3f(walls[i].x1, walls[i].y1, Z0);
 		glVertex3f(walls[i].x1+off, walls[i].y1+WALL_Y_OFFSET, Z1);
-		glVertex3f(walls[i].x2+off, walls[i].y2+WALL_Y_OFFSET, Z1);
 		glEnd();
 	}
 #ifdef DEBUG_MARKERS
@@ -244,12 +240,8 @@ void display() {
 		glBegin(GL_POLYGON);
 		glVertex3f(floors[i].x1, floors[i].y1, Z1);
 		glVertex3f(floors[i].x1, floors[i].y2, Z1);
-		glVertex3f(floors[i].x2, floors[i].y1, Z1);
-		glEnd();
-		glBegin(GL_POLYGON);
-		glVertex3f(floors[i].x1, floors[i].y2, Z1);
-		glVertex3f(floors[i].x2, floors[i].y1, Z1);
 		glVertex3f(floors[i].x2, floors[i].y2, Z1);
+		glVertex3f(floors[i].x2, floors[i].y1, Z1);
 		glEnd();
 	}
 	glPopMatrix();
@@ -342,7 +334,10 @@ void physics(int bla) {
 					ball.vx = 0.0f;
 				} else {
 					float vd = distance(0, 0, ball.vx, ball.vy); // magnitude of velocity
-					float vv = vd * (i == 0 ? BUMPER_WALL_NEW_VEL : WALL_NEW_VEL); // new velocity
+					float v = WALL_NEW_VEL;
+					if (i == WALL_BUMPER) v = BUMPER_WALL_NEW_VEL;
+					if (i == WALL_FLIPPER_L || i == WALL_FLIPPER_R) v = FLIPPER_WALL_NEW_VEL;
+					float vv = vd * v; // new velocity
 					if (vv < WALL_MIN_VEL) vv = WALL_MIN_VEL; // set minimum new velocity
 					ball.vx -= (cosf(t) * vd) - (cosf(t) * vv), // cancel out the velocity with the wall angle
 					ball.vy -= (sinf(t) * vd) - (sinf(t) * vv); // set the velocity from subtracted old and bounce velocity
@@ -379,6 +374,7 @@ int main(int argc, char* argv[]) {
 	glutCreateWindow("Pinball");
 	glEnable(GL_COLOR_MATERIAL);
 	glEnable(GL_LIGHT0);
+	glEnable(GL_DEPTH_TEST);
 	glLightfv(GL_LIGHT0, GL_AMBIENT,  (float[]){0.0f,0.0f,0.0f,1.0f});
 	glLightfv(GL_LIGHT0, GL_DIFFUSE,  (float[]){1.0f,1.0f,1.0f,1.0f});
 	glLightfv(GL_LIGHT0, GL_SPECULAR, (float[]){1.0f,1.0f,1.0f,1.0f});
