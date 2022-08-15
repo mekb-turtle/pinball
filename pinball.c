@@ -3,16 +3,17 @@
 #include <GL/glut.h>
 #include <math.h>
 
-#define SCALE_X 0.02f
-#define SCALE_Y 0.02f
-#define SCALE_Z 0.5f
+#define SCALE_X 0.03f
+#define SCALE_Y 0.03f
+#define SCALE_Z 1.0f
 #define CIRCLE_DRAW_STEP 0.1f
-#define FLOOR_COLOR    0.5f, 0.0f, 0.1f, 1.0f
-#define WALL_COLOR     1.0f, 1.0f, 1.0f, 1.0f
-#define BUMPER_COLOR   1.0f, 0.0f, 1.0f, 1.0f
-#define BALL_COLOR     0.0f, 1.0f, 0.0f, 1.0f
-#define MARKER_COLOR   1.0f, 1.0f, 0.0f, 1.0f
-#define LAUNCHER_COLOR 1.0f, 1.0f, 0.0f, 1.0f
+#define FLOOR_COLOR    0.5f, 0.0f, 0.1f, 1.0f // dark red
+#define WALL_COLOR     2.0f, 2.0f, 2.0f, 1.0f // white
+#define BUMPER_COLOR   2.0f, 0.5f, 2.0f, 1.0f // magenta
+#define BALL_COLOR     0.0f, 2.0f, 0.5f, 1.0f // green
+#define MARKER_COLOR   2.0f, 2.0f, 0.5f, 1.0f // yellow
+#define LAUNCHER_COLOR 2.0f, 2.0f, 0.5f, 1.0f // yellow
+#define FLIPPER_COLOR  2.0f, 0.6f, 0.5f, 1.0f // red
 #define Z0 -0.5f
 #define Z1 +0.5f
 #define ROTATE_X 3.0f
@@ -47,6 +48,10 @@
 #define STEPS 20
 #define LAUNCH_PULL_STEP 0.0045f
 #define LAUNCH_RELEASE_STEP 0.05f
+#define FLIPPER_MOVE_STEP 0.065f
+#define FLIPPER_ANGLE 0.125f
+#define FLIPPER_MOVE_ANGLE 0.25f
+#define FLIPPER_LENGTH 0.4f
 
 #define WALL_BUMPER 0
 #define WALL_BARRIER 1
@@ -55,6 +60,9 @@
 #define WALL_TOP 4
 #define WALL_LEFT 5
 #define WALL_TOP_RIGHT 6
+#define WALL_RIGHT 7
+#define WALL_FLIPPER_L 8
+#define WALL_FLIPPER_R 9
 
 struct ball_ {
 	float x, y, vx, vy;
@@ -66,33 +74,45 @@ struct pos {
 struct bumper {
 	float x, y, bx, by;
 } bumpers[] = {
-	{ +BOARD_W*0.25f, +BOARD_H*0.30, 0.0f, 0.0f },
-	{ -BOARD_W*0.25f, +BOARD_H*0.30, 0.0f, 0.0f },
-	{ +BOARD_W*0.15f, -BOARD_H*0.15, 0.0f, 0.0f },
-	{ -BOARD_W*0.12f, -BOARD_H*0.35, 0.0f, 0.0f },
+	{ .x=+BOARD_W*0.25f, .y=+BOARD_H*0.30 },
+	{ .x=-BOARD_W*0.25f, .y=+BOARD_H*0.30 },
+	{ .x=+BOARD_W*0.15f, .y=-BOARD_H*0.15 },
 };
 struct pos2 {
 	float x1, y1, x2, y2;
 } walls[] = {
-	{ +BOARD_W, +BOARD_H, +BOUNDS_W, +BOUNDS_H-(BOUNDS_W-BOARD_W)*1.25 }, // top right bumper wall
-	{ +BOARD_W, +BOARD_H, +BOARD_W,  +BOARD_H -(BOUNDS_W-BOARD_W)*2 }, // barrier
-	{ +BOARD_W, LAUNCHER_INIT_Y, +BOUNDS_W, LAUNCHER_INIT_Y }, // launcher
-	{ +BOARD_W, -BOARD_H, +BOUNDS_W, -BOUNDS_H }, // bottom wall of launcher
-	{ +BOARD_W, +BOARD_H, +BOUNDS_W, +BOUNDS_H }, // top wall of launcher
-	{ +BOARD_W, -BOARD_H, +BOARD_W, +BOARD_H-(BOUNDS_W-BOARD_W)*2 }, // left wall of launcher
-	{ +BOUNDS_W, +BOARD_H, +BOUNDS_W, +BOUNDS_H-(BOUNDS_W-BOARD_W)*1.25 }, // top right wall of launcher
-	{ +BOUNDS_W, -BOARD_H, +BOUNDS_W, +BOUNDS_H-(BOUNDS_W-BOARD_W)*1.25 }, // right wall of launcher
-	{ +BOARD_W, +BOARD_H, -BOARD_W, +BOARD_H }, // top wall of game
-	{ -BOARD_W, +BOARD_H, -BOARD_W, -BOARD_H }, // left wall of game
-	{ +BOARD_W*0.5, -BOARD_H*0.3, +BOARD_W, -BOARD_H*0.2 },
-	{ -BOARD_W, -BOARD_H*0.7, -BOARD_W*0.5, -BOARD_H*0.8 },
-	{ +BOARD_W, -BOARD_H*0.7, +BOARD_W*0.5, -BOARD_H*0.8 },
-	{ -BOARD_W*0.5, -BOARD_H*0.9, +BOARD_W*0.5, -BOARD_H*0.8 },
-	{ -BOARD_W*0.8, +BOARD_H*0.3, -BOARD_W*0.5, +BOARD_H*0.4 },
-	{ +BOARD_W*0.8, +BOARD_H*0.3, +BOARD_W*0.5, +BOARD_H*0.4 },
+	{ .x1=+BOARD_W, .y1=+BOARD_H, .x2=+BOUNDS_W, .y2=+BOUNDS_H-(BOUNDS_W-BOARD_W)*1.25 }, // top right bumper wall
+	{ .x1=+BOARD_W, .y1=+BOARD_H, .x2=+BOARD_W, .y2= +BOARD_H -(BOUNDS_W-BOARD_W)*2 }, // barrier
+	{ .x1=+BOARD_W, .y1=LAUNCHER_INIT_Y, .x2=+BOUNDS_W, .y2=LAUNCHER_INIT_Y }, // launcher
+	{ .x1=+BOARD_W, .y1=-BOARD_H, .x2=+BOUNDS_W, .y2=-BOUNDS_H }, // bottom wall of launcher
+	{ .x1=+BOARD_W, .y1=+BOARD_H, .x2=+BOUNDS_W, .y2=+BOUNDS_H }, // top wall of launcher
+	{ .x1=+BOARD_W, .y1=-BOARD_H, .x2=+BOARD_W, .y2=+BOARD_H-(BOUNDS_W-BOARD_W)*2 }, // left wall of launcher
+	{ .x1=+BOUNDS_W, .y1=+BOARD_H, .x2=+BOUNDS_W, .y2=+BOUNDS_H-(BOUNDS_W-BOARD_W)*1.25 }, // top right wall of launcher
+	{ .x1=+BOUNDS_W, .y1=-BOARD_H, .x2=+BOUNDS_W, .y2=+BOUNDS_H-(BOUNDS_W-BOARD_W)*1.25 }, // right wall of launcher
+	{ .x1=-BOARD_W*0.5, .y1=-BOARD_H*0.8 }, // left flipper
+	{ .x1=+BOARD_W*0.5, .y1=-BOARD_H*0.8 }, // right flipper
+	{ .x1=+BOARD_W, .y1=+BOARD_H, .x2=-BOARD_W, .y2=+BOARD_H }, // top wall of game
+	{ .x1=-BOARD_W, .y1=+BOARD_H, .x2=-BOARD_W, .y2=-BOARD_H }, // left wall of game
+	{ .x1=+BOARD_W*0.5, .y1=-BOARD_H*0.3, .x2=+BOARD_W, .y2=-BOARD_H*0.2 },
+	{ .x1=-BOARD_W, .y1=-BOARD_H*0.7, .x2=-BOARD_W*0.5, .y2=-BOARD_H*0.8 },
+	{ .x1=+BOARD_W, .y1=-BOARD_H*0.7, .x2=+BOARD_W*0.5, .y2=-BOARD_H*0.8 },
+	{ .x1=-BOARD_W*0.8, .y1=+BOARD_H*0.3, .x2=-BOARD_W*0.5, .y2=+BOARD_H*0.4 },
+	{ .x1=+BOARD_W*0.8, .y1=+BOARD_H*0.3, .x2=+BOARD_W*0.5, .y2=+BOARD_H*0.4 },
 }, floors[] = {
-	{ -BOARD_W, -BOARD_H, +BOARD_W, +BOARD_H },
-	{ +BOARD_W, -BOARD_H, +BOUNDS_W, +BOARD_H },
+	{ .x1=-BOARD_W, .y1=-BOARD_H, .x2=+BOARD_W, .y2=+BOARD_H },
+	{ .x1=+BOARD_W, .y1=-BOARD_H, .x2=+BOUNDS_W, .y2=+BOARD_H },
+};
+bool flipper_l, flipper_r;
+struct flipper {
+	size_t i;
+	float length;
+	float angle;
+	float move_angle;
+	float move;
+	bool *active;
+} flippers[] = {
+	{ .i=WALL_FLIPPER_L, .length=BOARD_W*FLIPPER_LENGTH, .angle=-M_PI*  (FLIPPER_ANGLE), .move_angle=+M_PI*FLIPPER_MOVE_ANGLE, .move=0.0f, .active=&flipper_l },
+	{ .i=WALL_FLIPPER_R, .length=BOARD_W*FLIPPER_LENGTH, .angle=-M_PI*(1-FLIPPER_ANGLE), .move_angle=-M_PI*FLIPPER_MOVE_ANGLE, .move=0.0f, .active=&flipper_r },
 };
 float distance(float x1, float y1, float x2, float y2) {
 	return sqrtf(((x2-x1)*(x2-x1))+((y2-y1)*(y2-y1)));
@@ -116,7 +136,6 @@ struct pos nearest(struct pos2 line, float px, float py) {
 }
 int w, h, s, ow, oh;
 bool tilt_l, tilt_r;
-bool flipper_l, flipper_r;
 bool started = 0;
 bool pulling_launch;
 float launch = 0.0f;
@@ -188,15 +207,12 @@ void display() {
 	for (size_t i = 0; i < sizeof(walls) / sizeof(struct pos2); ++i) {
 		if (i == WALL_BARRIER && !started) continue;
 		switch (i) {
-			/*
-			case WALL_BUMPER:
-			case WALL_TOP:
-			case WALL_TOP_RIGHT:
-				glColor4f(BUMPER_COLOR);
-				break;
-			*/
 			case WALL_LAUNCHER:
 				glColor4f(LAUNCHER_COLOR);
+				break;
+			case WALL_FLIPPER_L:
+			case WALL_FLIPPER_R:
+				glColor4f(FLIPPER_COLOR);
 				break;
 			default:
 				glColor4f(WALL_COLOR);
@@ -204,7 +220,7 @@ void display() {
 		}
 		if (i == WALL_BOTTOM && launch >= 1.0f) continue;
 		float off = (walls[i].x1 == walls[i].x2 && tilt == 0.0f) * WALL_X_OFFSET;
-		if (i == WALL_LEFT) off = -off;
+		if (i == WALL_LEFT || i == WALL_BARRIER) off = -off;
 		glBegin(GL_POLYGON);
 		glVertex3f(walls[i].x1, walls[i].y1, Z0);
 		glVertex3f(walls[i].x2, walls[i].y2, Z0);
@@ -303,6 +319,17 @@ void physics(int bla) {
 			}
 		}
 		ball.launch = 0;
+		for (size_t i = 0; i < sizeof(flippers) / sizeof(struct flipper); ++i) {
+			if (*flippers[i].active) {
+				flippers[i].move += FLIPPER_MOVE_STEP / STEPS;
+				if (flippers[i].move > 1.0f) flippers[i].move = 1.0f;
+			} else {
+				flippers[i].move -= FLIPPER_MOVE_STEP / STEPS;
+				if (flippers[i].move < 0.0f) flippers[i].move = 0.0f;
+			}
+			walls[flippers[i].i].x2 = cosf(flippers[i].move_angle * flippers[i].move + flippers[i].angle) * flippers[i].length + walls[flippers[i].i].x1;
+			walls[flippers[i].i].y2 = sinf(flippers[i].move_angle * flippers[i].move + flippers[i].angle) * flippers[i].length + walls[flippers[i].i].y1;
+		}
 		for (size_t i = 0; i < sizeof(walls) / sizeof(struct pos2); ++i) {
 			if (i == WALL_BARRIER && !started) continue;
 			if (i == WALL_BOTTOM && launch >= 1.0f) continue;
@@ -361,6 +388,7 @@ int main(int argc, char* argv[]) {
 	glutSetKeyRepeat(GLUT_KEY_REPEAT_OFF);
 	glutKeyboardFunc(keyboardDown);
 	glutKeyboardUpFunc(keyboardUp);
+	tilt_l = tilt_r = flipper_l = flipper_r = 0;
 	reset(&ball);
 	physics(0);
 	printf("Q/E to use flippers\n");
