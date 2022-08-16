@@ -33,7 +33,8 @@
 #define BUMPER_MIN_VEL 0.35f
 #define WALL_NEW_VEL 2.0f
 #define BUMPER_WALL_NEW_VEL 3.0f
-#define FLIPPER_WALL_NEW_VEL 2.2f
+#define FLIPPER_WALL_NEW_VEL 2.0f
+#define FLIPPER_WALL_MIN_VEL 0.35f
 #define WALL_MIN_VEL 0.08f
 #define MAX_VEL 0.6f
 #define BOARD_W 20.0f
@@ -334,11 +335,16 @@ void physics(int bla) {
 					ball.vx = 0.0f;
 				} else {
 					float vd = distance(0, 0, ball.vx, ball.vy); // magnitude of velocity
+					bool isFlipper = i == WALL_FLIPPER_L || i == WALL_FLIPPER_R;
 					float v = WALL_NEW_VEL;
 					if (i == WALL_BUMPER) v = BUMPER_WALL_NEW_VEL;
-					if (i == WALL_FLIPPER_L || i == WALL_FLIPPER_R) v = FLIPPER_WALL_NEW_VEL;
+					if (isFlipper) v = FLIPPER_WALL_NEW_VEL;
 					float vv = vd * v; // new velocity
-					if (vv < WALL_MIN_VEL) vv = WALL_MIN_VEL; // set minimum new velocity
+					if (isFlipper) {
+						if (vv < FLIPPER_WALL_MIN_VEL) vv = FLIPPER_WALL_MIN_VEL; // set minimum new velocity
+					} else {
+						if (vv < WALL_MIN_VEL) vv = WALL_MIN_VEL; // set minimum new velocity
+					}
 					ball.vx -= (cosf(t) * vd) - (cosf(t) * vv), // cancel out the velocity with the wall angle
 					ball.vy -= (sinf(t) * vd) - (sinf(t) * vv); // set the velocity from subtracted old and bounce velocity
 				}
