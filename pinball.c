@@ -53,7 +53,10 @@
 #define FLIPPER_MOVE_STEP 0.065f
 #define FLIPPER_ANGLE 0.125f
 #define FLIPPER_MOVE_ANGLE 0.25f
-#define FLIPPER_LENGTH 0.4f
+#define FLIPPER_LENGTH 0.42f
+#define FLIPPER_MOVED_MUL 2.0f
+#define FLIPPER_MOVED_ADD 1.0f
+#define FLIPPER_MOVED_DEF 0.5f
 
 #define WALL_BUMPER 0
 #define WALL_BARRIER 1
@@ -76,31 +79,31 @@ struct pos {
 struct bumper {
 	float x, y, bx, by;
 } bumpers[] = {
-	{ .x=+BOARD_W*0.25f, .y=+BOARD_H*0.30 },
-	{ .x=-BOARD_W*0.25f, .y=+BOARD_H*0.30 },
-	{ .x=+BOARD_W*0.15f, .y=-BOARD_H*0.15 },
+	{ .x=+BOARD_W*0.25f, .y=+BOARD_H*0.30f },
+	{ .x=-BOARD_W*0.25f, .y=+BOARD_H*0.30f },
+	{ .x=+BOARD_W*0.15f, .y=-BOARD_H*0.15f },
 };
 struct pos2 {
 	float x1, y1, x2, y2;
 } walls[] = {
-	{ .x1=+BOARD_W, .y1=+BOARD_H, .x2=+BOUNDS_W, .y2=+BOUNDS_H-(BOUNDS_W-BOARD_W)*1.25 }, // top right bumper wall
-	{ .x1=+BOARD_W, .y1=+BOARD_H, .x2=+BOARD_W, .y2= +BOARD_H -(BOUNDS_W-BOARD_W)*2 }, // barrier
+	{ .x1=+BOARD_W, .y1=+BOARD_H, .x2=+BOUNDS_W, .y2=+BOUNDS_H-(BOUNDS_W-BOARD_W)*1.25f }, // top right bumper wall
+	{ .x1=+BOARD_W, .y1=+BOARD_H, .x2=+BOARD_W, .y2= +BOARD_H -(BOUNDS_W-BOARD_W)*2.0f }, // barrier
 	{ .x1=+BOARD_W, .y1=LAUNCHER_INIT_Y, .x2=+BOUNDS_W, .y2=LAUNCHER_INIT_Y }, // launcher
 	{ .x1=+BOARD_W, .y1=-BOARD_H, .x2=+BOUNDS_W, .y2=-BOUNDS_H }, // bottom wall of launcher
 	{ .x1=+BOARD_W, .y1=+BOARD_H, .x2=+BOUNDS_W, .y2=+BOUNDS_H }, // top wall of launcher
-	{ .x1=+BOARD_W, .y1=-BOARD_H, .x2=+BOARD_W, .y2=+BOARD_H-(BOUNDS_W-BOARD_W)*2 }, // left wall of launcher
-	{ .x1=+BOUNDS_W, .y1=+BOARD_H, .x2=+BOUNDS_W, .y2=+BOUNDS_H-(BOUNDS_W-BOARD_W)*1.25 }, // top right wall of launcher
-	{ .x1=+BOUNDS_W, .y1=-BOARD_H, .x2=+BOUNDS_W, .y2=+BOUNDS_H-(BOUNDS_W-BOARD_W)*1.25 }, // right wall of launcher
-	{ .x1=-BOARD_W*0.5, .y1=-BOARD_H*0.8 }, // left flipper
-	{ .x1=+BOARD_W*0.5, .y1=-BOARD_H*0.8 }, // right flipper
+	{ .x1=+BOARD_W, .y1=-BOARD_H, .x2=+BOARD_W, .y2=+BOARD_H-(BOUNDS_W-BOARD_W)*2.0f }, // left wall of launcher
+	{ .x1=+BOUNDS_W, .y1=+BOARD_H, .x2=+BOUNDS_W, .y2=+BOUNDS_H-(BOUNDS_W-BOARD_W)*1.25f }, // top right wall of launcher
+	{ .x1=+BOUNDS_W, .y1=-BOARD_H, .x2=+BOUNDS_W, .y2=+BOUNDS_H-(BOUNDS_W-BOARD_W)*1.25f }, // right wall of launcher
+	{ .x1=-BOARD_W*0.5f, .y1=-BOARD_H*0.8f }, // left flipper
+	{ .x1=+BOARD_W*0.5f, .y1=-BOARD_H*0.8f }, // right flipper
 	{ .x1=+BOARD_W, .y1=+BOARD_H, .x2=-BOARD_W, .y2=+BOARD_H }, // top wall of game
 	{ .x1=-BOARD_W, .y1=+BOARD_H, .x2=-BOARD_W, .y2=-BOARD_H }, // left wall of game
-	{ .x1=+BOARD_W*0.5, .y1=-BOARD_H*0.3, .x2=+BOARD_W, .y2=-BOARD_H*0.2 },
-	{ .x1=-BOARD_W*0.5, .y1=-BOARD_H*0.6, .x2=-BOARD_W, .y2=-BOARD_H*0.5 },
-	{ .x1=-BOARD_W, .y1=-BOARD_H*0.7, .x2=-BOARD_W*0.5, .y2=-BOARD_H*0.8 },
-	{ .x1=+BOARD_W, .y1=-BOARD_H*0.7, .x2=+BOARD_W*0.5, .y2=-BOARD_H*0.8 },
-	{ .x1=-BOARD_W*0.8, .y1=+BOARD_H*0.3, .x2=-BOARD_W*0.5, .y2=+BOARD_H*0.4 },
-	{ .x1=+BOARD_W*0.8, .y1=+BOARD_H*0.3, .x2=+BOARD_W*0.5, .y2=+BOARD_H*0.4 },
+	{ .x1=+BOARD_W*0.5f, .y1=-BOARD_H*0.3f, .x2=+BOARD_W, .y2=-BOARD_H*0.2f },
+	{ .x1=-BOARD_W*0.5f, .y1=-BOARD_H*0.6f, .x2=-BOARD_W, .y2=-BOARD_H*0.5f },
+	{ .x1=-BOARD_W, .y1=-BOARD_H*0.7f, .x2=-BOARD_W*0.5f, .y2=-BOARD_H*0.8f },
+	{ .x1=+BOARD_W, .y1=-BOARD_H*0.7f, .x2=+BOARD_W*0.5f, .y2=-BOARD_H*0.8f },
+	{ .x1=-BOARD_W*0.8f, .y1=+BOARD_H*0.3f, .x2=-BOARD_W*0.5f, .y2=+BOARD_H*0.4f },
+	{ .x1=+BOARD_W*0.8f, .y1=+BOARD_H*0.3f, .x2=+BOARD_W*0.5f, .y2=+BOARD_H*0.4f },
 }, floors[] = {
 	{ .x1=-BOARD_W, .y1=-BOARD_H, .x2=+BOARD_W, .y2=+BOARD_H },
 	{ .x1=+BOARD_W, .y1=-BOARD_H, .x2=+BOUNDS_W, .y2=+BOARD_H },
@@ -113,9 +116,10 @@ struct flipper {
 	float move_angle;
 	float move;
 	bool *active;
+	float moved;
 } flippers[] = {
-	{ .i=WALL_FLIPPER_L, .length=BOARD_W*FLIPPER_LENGTH, .angle=-M_PI*  (FLIPPER_ANGLE), .move_angle=+M_PI*FLIPPER_MOVE_ANGLE, .move=0.0f, .active=&flipper_l },
-	{ .i=WALL_FLIPPER_R, .length=BOARD_W*FLIPPER_LENGTH, .angle=-M_PI*(1-FLIPPER_ANGLE), .move_angle=-M_PI*FLIPPER_MOVE_ANGLE, .move=0.0f, .active=&flipper_r },
+	{ .i=WALL_FLIPPER_L, .length=BOARD_W*FLIPPER_LENGTH, .angle=-M_PI*  (FLIPPER_ANGLE), .move_angle=+M_PI*FLIPPER_MOVE_ANGLE, .move=0.0f, .active=&flipper_l, .moved = 0.00 },
+	{ .i=WALL_FLIPPER_R, .length=BOARD_W*FLIPPER_LENGTH, .angle=-M_PI*(1-FLIPPER_ANGLE), .move_angle=-M_PI*FLIPPER_MOVE_ANGLE, .move=0.0f, .active=&flipper_r, .moved = 0.00 },
 };
 float distance(float x1, float y1, float x2, float y2) {
 	return sqrtf(((x2-x1)*(x2-x1))+((y2-y1)*(y2-y1)));
@@ -313,6 +317,7 @@ void physics(int bla) {
 		}
 		ball.launch = 0;
 		for (size_t i = 0; i < sizeof(flippers) / sizeof(struct flipper); ++i) {
+			flippers[i].moved = flippers[i].move * FLIPPER_MOVED_MUL + FLIPPER_MOVED_ADD;
 			if (*flippers[i].active) {
 				flippers[i].move += FLIPPER_MOVE_STEP / STEPS;
 				if (flippers[i].move > 1.0f) flippers[i].move = 1.0f;
@@ -320,6 +325,8 @@ void physics(int bla) {
 				flippers[i].move -= FLIPPER_MOVE_STEP / STEPS;
 				if (flippers[i].move < 0.0f) flippers[i].move = 0.0f;
 			}
+			if (flippers[i].move == 1.0f) flippers[i].moved = FLIPPER_MOVED_DEF;
+			if (flippers[i].move == 0.0f) flippers[i].moved = FLIPPER_MOVED_DEF;
 			walls[flippers[i].i].x2 = cosf(flippers[i].move_angle * flippers[i].move + flippers[i].angle) * flippers[i].length + walls[flippers[i].i].x1;
 			walls[flippers[i].i].y2 = sinf(flippers[i].move_angle * flippers[i].move + flippers[i].angle) * flippers[i].length + walls[flippers[i].i].y1;
 		}
@@ -335,13 +342,18 @@ void physics(int bla) {
 					ball.vx = 0.0f;
 				} else {
 					float vd = distance(0, 0, ball.vx, ball.vy); // magnitude of velocity
-					bool isFlipper = i == WALL_FLIPPER_L || i == WALL_FLIPPER_R;
+					size_t fi = 0;
+					bool f = 0;
+					for (size_t fi = 0; fi < sizeof(flippers) / sizeof(struct flipper); ++fi) {
+						if (flippers[fi].i == i) { f = 0; break; }
+					}
 					float v = WALL_NEW_VEL;
 					if (i == WALL_BUMPER) v = BUMPER_WALL_NEW_VEL;
-					if (isFlipper) v = FLIPPER_WALL_NEW_VEL;
+					if (f) v = FLIPPER_WALL_NEW_VEL * flippers[fi].moved;
 					float vv = vd * v; // new velocity
-					if (isFlipper) {
-						if (vv < FLIPPER_WALL_MIN_VEL) vv = FLIPPER_WALL_MIN_VEL; // set minimum new velocity
+					if (f) {
+						float mv = FLIPPER_WALL_MIN_VEL * flippers[fi].moved;
+						if (vv < mv) vv = mv; // set minimum new velocity
 					} else {
 						if (vv < WALL_MIN_VEL) vv = WALL_MIN_VEL; // set minimum new velocity
 					}
