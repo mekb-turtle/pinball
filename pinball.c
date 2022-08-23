@@ -42,7 +42,7 @@
 #define BOUNDS_W 25.0f
 #define BOUNDS_H 30.0f
 #define GRAVITY_X 0.002f
-#define GRAVITY_Y 0.008f
+#define GRAVITY_Y 0.002f
 #define LAUNCH_GRAVITY_Y 0.0035f
 #define BALL_INIT_X ((BOARD_W+BOUNDS_W)/2.0f)
 #define BALL_INIT_Y (BOARD_H * -0.4)
