@@ -58,17 +58,6 @@
 #define FLIPPER_MOVED_ADD 1.0f
 #define FLIPPER_MOVED_DEF 0.5f
 
-#define WALL_BUMPER 0
-#define WALL_BARRIER 1
-#define WALL_LAUNCHER 2
-#define WALL_BOTTOM 3
-#define WALL_TOP 4
-#define WALL_LEFT 5
-#define WALL_TOP_RIGHT 6
-#define WALL_RIGHT 7
-#define WALL_FLIPPER_L 8
-#define WALL_FLIPPER_R 9
-
 struct ball_ {
 	float x, y, vx, vy;
 	bool launch;
@@ -83,19 +72,31 @@ struct bumper {
 	{ .x=-BOARD_W*0.25f, .y=+BOARD_H*0.30f },
 	{ .x=+BOARD_W*0.15f, .y=-BOARD_H*0.15f },
 };
+enum {
+	WALL_BUMPER,
+	WALL_BARRIER,
+	WALL_LAUNCHER,
+	WALL_BOTTOM,
+	WALL_TOP,
+	WALL_LEFT,
+	WALL_TOP_RIGHT,
+	WALL_RIGHT,
+	WALL_FLIPPER_L,
+	WALL_FLIPPER_R
+};
 struct pos2 {
 	float x1, y1, x2, y2;
 } walls[] = {
-	{ .x1=+BOARD_W, .y1=+BOARD_H, .x2=+BOUNDS_W, .y2=+BOUNDS_H-(BOUNDS_W-BOARD_W)*1.25f }, // top right bumper wall
-	{ .x1=+BOARD_W, .y1=+BOARD_H, .x2=+BOARD_W, .y2= +BOARD_H -(BOUNDS_W-BOARD_W)*2.0f }, // barrier
-	{ .x1=+BOARD_W, .y1=LAUNCHER_INIT_Y, .x2=+BOUNDS_W, .y2=LAUNCHER_INIT_Y }, // launcher
-	{ .x1=+BOARD_W, .y1=-BOARD_H, .x2=+BOUNDS_W, .y2=-BOUNDS_H }, // bottom wall of launcher
-	{ .x1=+BOARD_W, .y1=+BOARD_H, .x2=+BOUNDS_W, .y2=+BOUNDS_H }, // top wall of launcher
-	{ .x1=+BOARD_W, .y1=-BOARD_H, .x2=+BOARD_W, .y2=+BOARD_H-(BOUNDS_W-BOARD_W)*2.0f }, // left wall of launcher
-	{ .x1=+BOUNDS_W, .y1=+BOARD_H, .x2=+BOUNDS_W, .y2=+BOUNDS_H-(BOUNDS_W-BOARD_W)*1.25f }, // top right wall of launcher
-	{ .x1=+BOUNDS_W, .y1=-BOARD_H, .x2=+BOUNDS_W, .y2=+BOUNDS_H-(BOUNDS_W-BOARD_W)*1.25f }, // right wall of launcher
-	{ .x1=-BOARD_W*0.5f, .y1=-BOARD_H*0.8f }, // left flipper
-	{ .x1=+BOARD_W*0.5f, .y1=-BOARD_H*0.8f }, // right flipper
+	[WALL_BUMPER]    = { .x1=+BOARD_W, .y1=+BOARD_H, .x2=+BOUNDS_W, .y2=+BOUNDS_H-(BOUNDS_W-BOARD_W)*1.25f }, // top right bumper wall
+	[WALL_BARRIER]   = { .x1=+BOARD_W, .y1=+BOARD_H, .x2=+BOARD_W, .y2= +BOARD_H -(BOUNDS_W-BOARD_W)*2.0f }, // barrier
+	[WALL_LAUNCHER]  = { .x1=+BOARD_W, .y1=LAUNCHER_INIT_Y, .x2=+BOUNDS_W, .y2=LAUNCHER_INIT_Y }, // launcher
+	[WALL_BOTTOM]    = { .x1=+BOARD_W, .y1=-BOARD_H, .x2=+BOUNDS_W, .y2=-BOUNDS_H }, // bottom wall of launcher
+	[WALL_TOP]       = { .x1=+BOARD_W, .y1=+BOARD_H, .x2=+BOUNDS_W, .y2=+BOUNDS_H }, // top wall of launcher
+	[WALL_LEFT]      = { .x1=+BOARD_W, .y1=-BOARD_H, .x2=+BOARD_W, .y2=+BOARD_H-(BOUNDS_W-BOARD_W)*2.0f }, // left wall of launcher
+	[WALL_TOP_RIGHT] = { .x1=+BOUNDS_W, .y1=+BOARD_H, .x2=+BOUNDS_W, .y2=+BOUNDS_H-(BOUNDS_W-BOARD_W)*1.25f }, // top right wall of launcher
+	[WALL_RIGHT]     = { .x1=+BOUNDS_W, .y1=-BOARD_H, .x2=+BOUNDS_W, .y2=+BOUNDS_H-(BOUNDS_W-BOARD_W)*1.25f }, // right wall of launcher
+	[WALL_FLIPPER_L] = { .x1=-BOARD_W*0.5f, .y1=-BOARD_H*0.8f }, // left flipper
+	[WALL_FLIPPER_R] = { .x1=+BOARD_W*0.5f, .y1=-BOARD_H*0.8f }, // right flipper
 	{ .x1=+BOARD_W, .y1=+BOARD_H, .x2=-BOARD_W, .y2=+BOARD_H }, // top wall of game
 	{ .x1=-BOARD_W, .y1=+BOARD_H, .x2=-BOARD_W, .y2=-BOARD_H }, // left wall of game
 	{ .x1=+BOARD_W*0.5f, .y1=-BOARD_H*0.3f, .x2=+BOARD_W, .y2=-BOARD_H*0.2f },
